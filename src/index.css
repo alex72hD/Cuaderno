@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+/* Mobile tactile micro-interactions */
+.touch-press {
+  transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.12s ease;
+}
+.touch-press:active {
+  transform: scale(0.95);
+}
+
+/* Safe area padding classes */
+.pt-safe {
+  padding-top: max(0.75rem, var(--sat));
+}
+.pb-safe {
+  padding-bottom: max(0.75rem, var(--sab));
+}
