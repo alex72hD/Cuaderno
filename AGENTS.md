@@ -1,38 +1,32 @@
 # AGENTS.md — Cuaderno con Calculadora Integrada (Móvil Local Offline)
 
 ## Descripción del Proyecto
-Es un cuaderno de notas y cuentas optimizado para dispositivos móviles con una calculadora integrada en tiempo real. Está diseñado para comerciantes, estudiantes, profesionales y cualquier persona que gestione notas de gastos, presupuestos o listas con cálculos y requiera una herramienta ágil que permita calcular y transferir resultados a las notas al instante. Su objetivo principal es ofrecer una experiencia 100% local, privada, táctil e instantánea, funcionando de manera completamente autónoma sin necesidad de conexión a internet.
+Es un cuaderno digital de notas y cuentas optimizado para dispositivos móviles con pesaje, cálculo en tiempo real y gestión integral de pedidos individuales y agrupados. Diseñado para comerciantes, distribuidores, profesionales y cualquier persona que requiera calcular importes por peso o cantidad, organizar clientes por grupo y transferir cifras a sus notas o a WhatsApp al instante. Su objetivo primordial es ofrecer una experiencia 100% local, privada, táctil, ligera e instantánea, funcionando de forma completamente autónoma sin conexión a internet ni datos mockeados.
 
 ---
 
 ## Stack y Estructura
 
 ### Tecnologías Clave
-- **Frontend / Framework:** React (con TypeScript) montado sobre **Vite** para máxima velocidad de compilación y recarga en caliente.
-- **Estilos:** **TailwindCSS** configurado con enfoque mobile-first (pantallas de 360px a 430px de ancho base).
-- **Gestión de Estado:** **Zustand** para estado global reactivo, liviano y con soporte de middleware para persistencia.
-- **Almacenamiento Local (100% Offline):** **IndexedDB** (o `localStorage` como fallback seguro), asegurando que todas las notas, configuraciones e historial de cálculos permanezcan en el almacenamiento local del dispositivo.
-- **Arquitectura Móvil:** Diseño Web Móvil / PWA (Progressive Web App con Service Worker y Web App Manifest) para instalación directa en el teléfono sin necesidad de tienda ni backend.
-- **Iconografía:** **Lucide React** o **React Icons** para botones táctiles legibles y minimalistas.
-- **Fechas y Utilidades:** `date-fns` o helpers nativos en JavaScript para formateo local de fecha/hora.
+- **Frontend / Framework:** React 19 (con TypeScript) montado sobre **Vite** para máxima velocidad de compilación y recarga en caliente.
+- **Estilos:** **TailwindCSS** configurado con enfoque mobile-first (pantallas de 360px a 430px de ancho base) y paleta visual aligerada.
+- **Gestión de Estado:** **Zustand** para estado reactivo, liviano y desacoplado (`useOrdersStore`, `useNotesStore`, `useCalculatorStore`).
+- **Almacenamiento Local (100% Offline):** `localStorage` con sanitización de mocks y soporte de exportación/importación en JSON.
+- **Arquitectura Móvil:** Diseño Web Móvil / PWA con ergonomía táctil y controles optimizados para el uso con pulgares.
+- **Iconografía:** **Lucide React** para botones táctiles legibles y minimalistas.
+- **Audio y Háptica:** Web Audio API local para feedback de toques sin dependencias externas.
 
-### Estructura de Carpetas Sugerida
+### Estructura de Carpetas
 ```text
 src/
-├── assets/             # Íconos, manifest, splash y recursos visuales locales
-├── components/         # Componentes UI comunes (Modal, Button, Input, Drawer, Header móvil)
-├── features/
-│   ├── calculator/     # Teclado táctil, pantalla de cálculo, historial e intérprete matemático
-│   ├── notes/          # Editor de notas, lista de cuadernos, tarjetas de notas, tags
-│   └── integration/    # Enlace entre calculadora y nota (insertar resultado, calcular líneas)
-├── storage/            # Capa de abstracción para IndexedDB/localStorage (CRUD local)
-├── store/              # Stores de Zustand (useNotesStore, useCalculatorStore, useAppStore)
-├── types/              # Definiciones TypeScript (Note, Calculation, Category, Settings)
-├── utils/
-│   ├── math/           # Motor de evaluación matemática segura (sin eval) y precisión decimal
-│   └── formatters/     # Formateo de moneda, separadores decimales y fechas
-├── App.tsx             # Layout móvil principal (Tabs, Split-view o Drawer)
-└── main.tsx            # Punto de entrada y registro de Service Worker offline
+├── assets/             # Íconos y recursos locales
+├── components/         # OrderSheet, NoteEditor, NoteList, Calculator, Modales de Respaldo y Catálogo
+├── storage/            # Persistencia en localStorage sin mocks y respaldo JSON
+├── store/              # Stores de Zustand (useOrdersStore, useNotesStore, useCalculatorStore)
+├── types/              # Definiciones TypeScript (ClientOrder, OrderBatch, Product, Note, Settings)
+├── utils/              # Motor aritmético seguro (sin eval), formateadores y sonido local
+├── App.tsx             # Layout móvil principal con filtros integrados de grupos y navegación
+└── main.tsx            # Punto de entrada
 ```
 
 ---
@@ -45,7 +39,7 @@ npm install
 # Iniciar servidor de desarrollo accesible desde el móvil en la misma red Wi-Fi
 npm run dev -- --host
 
-# Validar tipado y sintaxis (TypeScript + Linter)
+# Validar sintaxis y buenas prácticas con Oxlint
 npm run lint
 
 # Compilar bundle de producción optimizado para móvil offline
@@ -60,45 +54,40 @@ npm run preview -- --host
 ## Convenciones
 
 - **Idioma:**
-  - Código, nombres de variables, funciones y tipos en **inglés** o bilingüe consistente (ej: `useNotesStore`, `calculateExpression`, `activeNoteId`).
+  - Código, nombres de variables, funciones y tipos en **inglés** o bilingüe consistente (ej: `useOrdersStore`, `calculateOrderTotals`, `selectedBatchFilter`).
   - Textos de interfaz de usuario, mensajes de ayuda, placeholders y documentación en **español** claro y amigable.
 - **Diseño Táctil Móvil (Touch Ergonomics):**
-  - Botones y zonas de toque con un tamaño mínimo de **44px x 44px** (óptimo 48px) para uso ergonómico con pulgares.
-  - Evitar gestos que colisionen con los gestos del sistema operativo móvil (swipe back, scroll pull-to-refresh accidental).
-  - Feedback visual inmediato (efecto `:active` / `:hover` sutil y respuesta háptica si el navegador móvil lo soporta).
+  - Botones y zonas de toque con un tamaño mínimo de **44px x 44px** para uso ergonómico con pulgares.
+  - Diseño aligerado: evitar banners redundantes de instrucciones, degradados pesados o elementos que sobrecarguen la pantalla.
+  - Feedback visual inmediato (efecto `:active` sutil y respuesta auditiva o háptica local).
 - **Estilo de Código:**
-  - Componentes funcionales pequeños con TypeScript estricto (`noImplicitAny`, interfaces claras para modelos de datos).
-  - Hooks personalizados para encapsular lógica de cálculo y persistencia (`useCalculator`, `useNoteEditor`).
+  - Componentes funcionales limpios con TypeScript estricto (`noImplicitAny`, interfaces claras para modelos de datos).
+  - Stores reactivos con mutaciones inmutables y persistencia inmediata en almacenamiento local.
 
 ---
 
 ## Reglas de Dominio y Trampas Conocidas
 
 1. **Cero Dependencia de Internet (Regla de Oro):**
-   - La aplicación jamás debe intentar realizar peticiones `fetch`/`axios` a endpoints externos que bloqueen o condicionen la funcionalidad.
-   - Fuentes, íconos y librerías deben estar empaquetados localmente en el bundle. La app debe arrancar y funcionar al 100% en **Modo Avión**.
-2. **Precisión Matemática y Contabilidad Decimal:**
+   - La aplicación jamás debe intentar realizar peticiones `fetch`/`axios` a endpoints externos.
+   - Todo opera localmente en el dispositivo. La app debe arrancar y funcionar al 100% en **Modo Avión**.
+2. **Integración Total de Pedidos Agrupados:**
+   - Los pedidos que pertenecen a un grupo **no deben aislarse ni excluirse** de la vista principal de pedidos.
+   - En la vista de pedidos, el usuario debe poder ver todos los pedidos, filtrar por pedidos individuales ("Sin grupo") o filtrar por un grupo específico.
+   - Cualquier pedido puede asignarse, reasignarse o desvincularse de un grupo directamente desde su hoja (`OrderSheet`).
+3. **Cero Datos Mockeados (Clean Slate):**
+   - No inyectar listas de pedidos, productos o notas falsas por defecto. La aplicación debe comenzar limpia y vacía, lista para que el usuario guarde sus datos reales.
+4. **Diseño Aligerado y Aprovechamiento Vertical:**
+   - En pantallas móviles estrechas (360px-430px), cada píxel vertical cuenta. Se deben evitar banners de texto redundantes o cajas decorativas voluminosas.
+5. **Precisión Matemática y Contabilidad Decimal:**
    - Evitar errores clásicos de coma flotante de JavaScript (ej. `0.1 + 0.2 !== 0.3`).
-   - Usar lógica de redondeo seguro o precisión fija de 2 a 4 decimales para operaciones contables/financieras cotidianas.
-3. **Punto vs. Coma Decimal:**
-   - En teclados móviles hispanohablantes los usuarios usan tanto `,` como `.`. El motor debe normalizar la entrada para evitar fallos de sintaxis al calcular.
-4. **Evaluación de Expresiones Segura:**
-   - **PROHIBIDO TERMINANTEMENTE EL USO DE `eval()` o `new Function()`** para resolver cálculos. Se debe usar un parser/lexer de tokens matemáticos seguro y controlado.
-5. **Simbiosis Calculadora <-> Nota:**
-   - El usuario debe poder:
-     - Insertar el resultado de la calculadora directamente en la posición del cursor de la nota activa.
-     - Seleccionar un valor o número dentro de una nota y cargarlo en la calculadora.
-     - Ver un historial de operaciones recientes vinculado a la sesión actual.
-6. **Auto-guardado con Debounce:**
-   - En móviles el usuario puede cambiar de app o bloquear la pantalla en cualquier momento. Cada pulsación en las notas debe guardarse con un debounce de 300-500ms en el almacenamiento local para prevenir pérdidas.
-
----
-
-## Forma de Trabajar con Agentes
-
-1. **Planificar antes de codificar:** Antes de implementar una funcionalidad compleja, detallar la arquitectura del componente y el flujo de datos.
-2. **Cambios atómicos y seguros:** Modificar piezas concretas sin refactorizar todo el proyecto en una sola pasada.
-3. **Explicación al terminar:** Resumir los cambios técnicos hechos, cómo probarlos en un emulador o móvil y qué precauciones considerar.
+   - Usar lógica de redondeo seguro contable a 2 decimales para operaciones de dinero y peso.
+6. **Punto vs. Coma Decimal:**
+   - Aceptar tanto `,` como `.` como separadores decimales válidos en teclado numérico y campos de entrada.
+7. **Evaluación de Expresiones Segura:**
+   - **PROHIBIDO TERMINANTEMENTE EL USO DE `eval()` o `new Function()`** para resolver cálculos. Se debe usar el motor evaluador seguro implementado en `src/utils/mathEngine.ts`.
+8. **Auto-guardado con Debounce:**
+   - Guardar cambios en notas y pedidos en `localStorage` con debounce de 300-400ms para prevenir pérdidas en caso de bloqueo de pantalla o cambio de aplicación en el móvil.
 
 ---
 
@@ -106,23 +95,23 @@ npm run preview -- --host
 
 - ✅ **Siempre:**
   - Garantizar que la app opere perfectamente desconectada de internet.
-  - Diseñar con mentalidad móvil primero (pantallas estrechas, orientación vertical, interacción táctil).
-  - Proteger los datos del usuario asegurando persistencia local inmediata.
+  - Mantener los pedidos agrupados accesibles e integrados en la vista de pedidos.
+  - Proteger los datos reales del usuario asegurando persistencia local inmediata.
+  - Mantener la interfaz limpia, ágil y aligerada.
 - ⚠️ **Pregunta antes de:**
-  - Introducir librerías o dependencias npm nuevas.
-  - Modificar el esquema de datos de las notas o la estructura de almacenamiento.
-  - Reestructurar de forma drástica el diseño o navegación entre la vista de notas y la calculadora.
+  - Introducir dependencias npm nuevas.
+  - Alterar drásticamente el esquema de almacenamiento de pedidos o notas.
 - 🚫 **Nunca:**
-  - Añadir llamadas a APIs remotas, analíticas invasivas o autenticación en la nube requerida.
+  - Añadir llamadas a APIs remotas, analíticas invasivas o autenticación requerida.
   - Usar `eval()` para resolver cálculos matemáticos.
-  - Implementar funciones que bloqueen el hilo principal o provoquen pérdida de notas al recargar la página.
+  - Reintroducir datos de prueba mockeados que ensucien la experiencia de usuario.
 
 ---
 
 ## Verificación
 
-Antes de dar por completada cualquier tarea, el agente debe verificar:
-1. **Compilación y Linters:** Ejecutar `npm run build` o `npm run lint` sin advertencias críticas ni errores de TypeScript.
-2. **Verificación Mobile Viewport:** Probar visualmente en dimensiones móviles estándar (360x780, 390x844, 412x915).
-3. **Verificación Offline:** Confirmar que no hay dependencias de red en tiempo de ejecución.
-4. **Verificación de Persistencia:** Almacenar una nota, recargar el navegador y corroborar que los datos y el historial de cálculo siguen intactos.
+Antes de dar por completada cualquier tarea:
+1. **Compilación y Linters:** Ejecutar `npm run build` sin errores de compilación ni TypeScript.
+2. **Verificación Mobile Viewport:** Probar visualmente en dimensiones móviles estándar (360px a 430px).
+3. **Verificación Offline:** Confirmar funcionamiento completo desconectado.
+4. **Verificación de Persistencia y Cero Mocks:** Crear un pedido, recargar la página y constatar que persiste sin reaparición de datos de prueba.

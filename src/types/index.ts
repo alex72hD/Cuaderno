@@ -22,6 +22,7 @@ export interface OrderItem {
 
 export interface ClientOrder {
   id: string;
+  batchId?: string;
   clientName: string;
   clientPhone?: string;
   status: 'pendiente' | 'entregado' | 'pagado';
@@ -32,6 +33,12 @@ export interface ClientOrder {
   notes: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface OrderBatch {
+  id: string;
+  name: string;
+  createdAt: number;
 }
 
 export interface Note {

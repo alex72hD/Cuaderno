@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { exportBackupJSON, importBackupJSON } from '../storage/localStore';
 import { useNotesStore } from '../store/useNotesStore';
+import { useOrdersStore } from '../store/useOrdersStore';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { playKeyClick, triggerHaptic } from '../utils/sound';
 
@@ -21,6 +22,7 @@ interface BackupModalProps {
 
 export const BackupModal: React.FC<BackupModalProps> = ({ isOpen, onClose }) => {
   const { reloadNotes } = useNotesStore();
+  const { reloadAll } = useOrdersStore();
   const { settings, updateSettings } = useCalculatorStore();
 
   const [importStatus, setImportStatus] = useState<{
@@ -69,6 +71,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({ isOpen, onClose }) => 
         setImportStatus(res);
         if (res.success) {
           reloadNotes();
+          reloadAll();
           triggerHaptic(25);
         }
       }

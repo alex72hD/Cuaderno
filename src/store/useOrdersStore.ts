@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import type { ClientOrder, OrderItem, Product, UnitType } from '../types';
+import type { ClientOrder, OrderBatch, OrderItem, Product, UnitType } from '../types';
 import {
   loadOrdersFromStorage,
   saveOrdersToStorage,
+  loadOrderBatchesFromStorage,
+  saveOrderBatchesToStorage,
   loadProductsFromStorage,
   saveProductsToStorage,
 } from '../storage/localStore';
@@ -10,14 +12,20 @@ import { roundToPrecision } from '../utils/mathEngine';
 
 interface OrdersState {
   orders: ClientOrder[];
+  orderBatches: OrderBatch[];
   products: Product[];
+  activeBatchId: string | null;
   activeOrderId: string | null;
   searchQuery: string;
   statusFilter: 'todos' | 'pendiente' | 'entregado' | 'pagado';
 
   // Acciones de Pedidos
   setActiveOrderId: (id: string | null) => void;
-  createOrder: (clientName?: string) => string;
+  setActiveBatchId: (id: string | null) => void;
+  setOrderBatch: (orderId: string, batchId: string | null) => void;
+  createOrderBatch: (name: string) => string;
+  deleteOrderBatch: (id: string) => void;
+  createOrder: (clientName?: string, batchId?: string | null) => string;
   updateOrder: (id: string, updates: Partial<ClientOrder>) => void;
   deleteOrder: (id: string) => void;
   addItemToOrder: (
@@ -49,18 +57,70 @@ interface OrdersState {
   reloadAll: () => void;
 }
 
-export const useOrdersStore = create<OrdersState>((set, get) => ({
-  orders: loadOrdersFromStorage(),
-  products: loadProductsFromStorage(),
-  activeOrderId: loadOrdersFromStorage()[0]?.id || null,
-  searchQuery: '',
-  statusFilter: 'todos',
+export const useOrdersStore = create<OrdersState>((set, get) => {
+  const orders = loadOrdersFromStorage();
+  const orderBatches = loadOrderBatchesFromStorage();
+  const activeBatchId = orderBatches[0]?.id || null;
+  const activeOrderId = orders[0]?.id || null;
+
+  return {
+    orders,
+    orderBatches,
+    products: loadProductsFromStorage(),
+    activeBatchId,
+    activeOrderId,
+    searchQuery: '',
+    statusFilter: 'todos',
 
   setActiveOrderId: (id) => set({ activeOrderId: id }),
+  setActiveBatchId: (id) => set({ activeBatchId: id }),
 
-  createOrder: (clientName = 'Nuevo Cliente') => {
+  setOrderBatch: (orderId, batchId) => {
+    const nextOrders = get().orders.map((o) =>
+      o.id === orderId
+        ? { ...o, batchId: batchId || undefined, updatedAt: Date.now() }
+        : o
+    );
+    saveOrdersToStorage(nextOrders);
+    set({ orders: nextOrders });
+  },
+
+  createOrderBatch: (name) => {
+    const batch: OrderBatch = {
+      id: 'batch-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      name: name.trim(),
+      createdAt: Date.now(),
+    };
+    const nextBatches = [batch, ...get().orderBatches];
+    saveOrderBatchesToStorage(nextBatches);
+    set({ orderBatches: nextBatches, activeBatchId: batch.id });
+    return batch.id;
+  },
+
+  deleteOrderBatch: (id) => {
+    const nextBatches = get().orderBatches.filter((batch) => batch.id !== id);
+    const nextOrders = get().orders.filter((order) => order.batchId !== id);
+    const nextActiveBatchId =
+      get().activeBatchId === id ? nextBatches[0]?.id || null : get().activeBatchId;
+    const nextActiveOrderId =
+      get().activeOrderId && nextOrders.some((order) => order.id === get().activeOrderId)
+        ? get().activeOrderId
+        : nextOrders[0]?.id || null;
+
+    saveOrderBatchesToStorage(nextBatches);
+    saveOrdersToStorage(nextOrders);
+    set({
+      orderBatches: nextBatches,
+      orders: nextOrders,
+      activeBatchId: nextActiveBatchId,
+      activeOrderId: nextActiveOrderId,
+    });
+  },
+
+  createOrder: (clientName = 'Nuevo Cliente', batchId = null) => {
     const newOrder: ClientOrder = {
       id: 'order-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      batchId: batchId || undefined,
       clientName: clientName.trim() || 'Cliente Sin Nombre',
       clientPhone: '',
       status: 'pendiente',
@@ -90,7 +150,11 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   deleteOrder: (id) => {
     const filtered = get().orders.filter((o) => o.id !== id);
     saveOrdersToStorage(filtered);
-    const nextActive = get().activeOrderId === id ? filtered[0]?.id || null : get().activeOrderId;
+    const currentState = get();
+    const nextActive =
+      currentState.activeOrderId === id
+        ? filtered[0]?.id || null
+        : currentState.activeOrderId;
     set({ orders: filtered, activeOrderId: nextActive });
   },
 
@@ -193,10 +257,20 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
   reloadAll: () => {
     const ords = loadOrdersFromStorage();
+    const batches = loadOrderBatchesFromStorage();
     const prods = loadProductsFromStorage();
-    set({ orders: ords, products: prods, activeOrderId: ords[0]?.id || null });
+    const batchId = batches[0]?.id || null;
+    const orderId = ords[0]?.id || null;
+    set({
+      orders: ords,
+      orderBatches: batches,
+      products: prods,
+      activeBatchId: batchId,
+      activeOrderId: orderId,
+    });
   },
-}));
+  };
+});
 
 /**
  * Función auxiliar para calcular totales de un pedido en tiempo real

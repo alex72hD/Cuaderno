@@ -4,10 +4,12 @@ import type {
   AppSettings,
   Product,
   ClientOrder,
+  OrderBatch,
 } from '../types';
 
 const PRODUCTS_KEY = 'cuaderno_calc_products_v1';
 const ORDERS_KEY = 'cuaderno_calc_orders_v1';
+const ORDER_BATCHES_KEY = 'cuaderno_calc_order_batches_v1';
 const NOTES_KEY = 'cuaderno_calc_notes_v1';
 const HISTORY_KEY = 'cuaderno_calc_history_v1';
 const SETTINGS_KEY = 'cuaderno_calc_settings_v1';
@@ -22,124 +24,24 @@ export const DEFAULT_SETTINGS: AppSettings = {
   insertFormat: 'expr_and_result',
 };
 
-// Productos semilla con precio por peso o unidad
-const SEED_PRODUCTS: Product[] = [
-  { id: 'prod-1', name: 'Queso Campesino', price: 18000, unit: 'kg', category: 'Lácteos' },
-  { id: 'prod-2', name: 'Carne de Res (Asar)', price: 26000, unit: 'kg', category: 'Carnes' },
-  { id: 'prod-3', name: 'Pechuga de Pollo', price: 16500, unit: 'kg', category: 'Carnes' },
-  { id: 'prod-4', name: 'Chuleta de Cerdo', price: 19500, unit: 'kg', category: 'Carnes' },
-  { id: 'prod-5', name: 'Café Especial 500g', price: 15000, unit: 'unidad', category: 'Abarrotes' },
-  { id: 'prod-6', name: 'Huevos AA x 30', price: 18000, unit: 'paquete', category: 'Abarrotes' },
-  { id: 'prod-7', name: 'Papa Criolla Limpia', price: 4500, unit: 'kg', category: 'Verduras' },
-  { id: 'prod-8', name: 'Tomate Chonto', price: 3800, unit: 'kg', category: 'Verduras' },
-];
-
-// Pedidos semilla en el cuaderno
-const SEED_ORDERS: ClientOrder[] = [
-  {
-    id: 'order-1',
-    clientName: 'Don Pedro - Restaurante La Casona',
-    clientPhone: '310 123 4567',
-    status: 'pendiente',
-    date: Date.now() - 3600000 * 2,
-    items: [
-      {
-        id: 'item-1-1',
-        productId: 'prod-2',
-        productName: 'Carne de Res (Asar)',
-        pricePerUnit: 26000,
-        weightOrQty: 3.25,
-        unit: 'kg',
-        subtotal: 84500, // 3.25 * 26000
-        notes: 'Corte fino',
-      },
-      {
-        id: 'item-1-2',
-        productId: 'prod-3',
-        productName: 'Pechuga de Pollo',
-        pricePerUnit: 16500,
-        weightOrQty: 2.1,
-        unit: 'kg',
-        subtotal: 34650, // 2.1 * 16500
-      },
-      {
-        id: 'item-1-3',
-        productId: 'prod-1',
-        productName: 'Queso Campesino',
-        pricePerUnit: 18000,
-        weightOrQty: 1.5,
-        unit: 'kg',
-        subtotal: 27000, // 1.5 * 18000
-      },
-    ],
-    discount: 5000,
-    deposit: 50000,
-    notes: 'Entregar antes de las 11:30 AM en la puerta de servicio.',
-    createdAt: Date.now() - 3600000 * 4,
-    updatedAt: Date.now() - 3600000 * 2,
-  },
-  {
-    id: 'order-2',
-    clientName: 'Doña Carmen - Tienda La Esquina',
-    clientPhone: '320 987 6543',
-    status: 'pendiente',
-    date: Date.now() - 3600000,
-    items: [
-      {
-        id: 'item-2-1',
-        productId: 'prod-1',
-        productName: 'Queso Campesino',
-        pricePerUnit: 18000,
-        weightOrQty: 2.45,
-        unit: 'kg',
-        subtotal: 44100, // 2.45 * 18000
-      },
-      {
-        id: 'item-2-2',
-        productId: 'prod-6',
-        productName: 'Huevos AA x 30',
-        pricePerUnit: 18000,
-        weightOrQty: 2,
-        unit: 'paquete',
-        subtotal: 36000,
-      },
-    ],
-    discount: 0,
-    deposit: 0,
-    notes: 'Cobrar contra entrega en efectivo.',
-    createdAt: Date.now() - 3600000 * 2,
-    updatedAt: Date.now() - 3600000,
-  },
-];
-
-const SEED_NOTES: Note[] = [
-  {
-    id: 'seed-note-1',
-    title: 'Apuntes del Día y Cobros Pendientes',
-    content: `Ruta de entrega matutina:
-• Pasar por donde Don Pedro a las 10:30 AM
-• Dejar queso a Doña Carmen
-• Cobro pendiente semana pasada: $ 45.000 (Tienda Central)`,
-    category: 'Cobros',
-    tags: ['Cobros', 'Ruta'],
-    isPinned: true,
-    createdAt: Date.now() - 86400000,
-    updatedAt: Date.now() - 3600000,
-    color: '#0284c7',
-  },
-];
+// IDs de datos de prueba antiguos a descartar si estaban en localStorage
+const MOCK_PROD_IDS = new Set(['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7', 'prod-8']);
+const MOCK_ORDER_IDS = new Set(['order-1', 'order-2']);
+const MOCK_NOTE_IDS = new Set(['seed-note-1']);
 
 export function loadProductsFromStorage(): Product[] {
   try {
     const raw = localStorage.getItem(PRODUCTS_KEY);
-    if (!raw) {
-      saveProductsToStorage(SEED_PRODUCTS);
-      return SEED_PRODUCTS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED_PRODUCTS;
+    if (!Array.isArray(parsed)) return [];
+    const clean = parsed.filter((p: Product) => !MOCK_PROD_IDS.has(p.id));
+    if (clean.length !== parsed.length) {
+      saveProductsToStorage(clean);
+    }
+    return clean;
   } catch {
-    return SEED_PRODUCTS;
+    return [];
   }
 }
 
@@ -154,14 +56,16 @@ export function saveProductsToStorage(products: Product[]): void {
 export function loadOrdersFromStorage(): ClientOrder[] {
   try {
     const raw = localStorage.getItem(ORDERS_KEY);
-    if (!raw) {
-      saveOrdersToStorage(SEED_ORDERS);
-      return SEED_ORDERS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED_ORDERS;
+    if (!Array.isArray(parsed)) return [];
+    const clean = parsed.filter((o: ClientOrder) => !MOCK_ORDER_IDS.has(o.id));
+    if (clean.length !== parsed.length) {
+      saveOrdersToStorage(clean);
+    }
+    return clean;
   } catch {
-    return SEED_ORDERS;
+    return [];
   }
 }
 
@@ -173,17 +77,38 @@ export function saveOrdersToStorage(orders: ClientOrder[]): void {
   }
 }
 
+export function loadOrderBatchesFromStorage(): OrderBatch[] {
+  try {
+    const raw = localStorage.getItem(ORDER_BATCHES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveOrderBatchesToStorage(batches: OrderBatch[]): void {
+  try {
+    localStorage.setItem(ORDER_BATCHES_KEY, JSON.stringify(batches));
+  } catch (err) {
+    console.error('Error guardando grupos de pedidos localmente:', err);
+  }
+}
+
 export function loadNotesFromStorage(): Note[] {
   try {
     const raw = localStorage.getItem(NOTES_KEY);
-    if (!raw) {
-      saveNotesToStorage(SEED_NOTES);
-      return SEED_NOTES;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_NOTES;
+    if (!Array.isArray(parsed)) return [];
+    const clean = parsed.filter((n: Note) => !MOCK_NOTE_IDS.has(n.id));
+    if (clean.length !== parsed.length) {
+      saveNotesToStorage(clean);
+    }
+    return clean;
   } catch {
-    return SEED_NOTES;
+    return [];
   }
 }
 
@@ -235,10 +160,11 @@ export function saveSettingsToStorage(settings: AppSettings): void {
 
 export function exportBackupJSON(): string {
   const data = {
-    version: 2,
+    version: 3,
     exportDate: new Date().toISOString(),
     products: loadProductsFromStorage(),
     orders: loadOrdersFromStorage(),
+    orderBatches: loadOrderBatchesFromStorage(),
     notes: loadNotesFromStorage(),
     history: loadHistoryFromStorage(),
     settings: loadSettingsFromStorage(),
@@ -258,6 +184,7 @@ export function importBackupJSON(jsonStr: string): { success: boolean; message: 
     if (Array.isArray(data.orders)) {
       saveOrdersToStorage(data.orders);
     }
+    saveOrderBatchesToStorage(Array.isArray(data.orderBatches) ? data.orderBatches : []);
     if (Array.isArray(data.notes)) {
       saveNotesToStorage(data.notes);
     }
