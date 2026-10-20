@@ -1,135 +1,85 @@
 import { create } from 'zustand';
 import type { Note } from '../types';
-import { loadNotesFromStorage, saveNotesToStorage } from '../storage/localStore';
+import { loadNotes, saveNotes } from '../storage/localStore';
 
 interface NotesState {
   notes: Note[];
-  activeNoteId: string | null;
-  searchQuery: string;
-  selectedCategory: string;
+  activeNoteId: string | null; // null = índice de notas
   cursorPosition: { start: number; end: number } | null;
 
-  // Acciones
   setActiveNoteId: (id: string | null) => void;
-  createNote: (category?: string) => string;
+  createNote: () => string;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   togglePin: (id: string) => void;
-  setSearchQuery: (query: string) => void;
-  setSelectedCategory: (category: string) => void;
   setCursorPosition: (pos: { start: number; end: number } | null) => void;
-  insertTextAtActiveNote: (textToInsert: string) => void;
+  insertTextAtActiveNote: (text: string) => void;
   reloadNotes: () => void;
 }
 
-export const useNotesStore = create<NotesState>((set, get) => ({
-  notes: loadNotesFromStorage(),
-  activeNoteId: loadNotesFromStorage()[0]?.id || null,
-  searchQuery: '',
-  selectedCategory: 'Todos',
-  cursorPosition: null,
+export const useNotesStore = create<NotesState>((set, get) => {
+  const commit = (notes: Note[], extra: Partial<NotesState> = {}) => {
+    saveNotes(notes);
+    set({ notes, ...extra });
+  };
 
-  setActiveNoteId: (id) => set({ activeNoteId: id }),
+  return {
+    notes: loadNotes(),
+    activeNoteId: null,
+    cursorPosition: null,
 
-  createNote: (category = 'General') => {
-    const newNote: Note = {
-      id: 'note-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
-      title: 'Nueva Nota ' + new Date().toLocaleDateString('es-CO'),
-      content: '',
-      category,
-      tags: [category],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      color: '#3b82f6',
-    };
+    setActiveNoteId: (id) => set({ activeNoteId: id, cursorPosition: null }),
 
-    const updated = [newNote, ...get().notes];
-    saveNotesToStorage(updated);
-    set({ notes: updated, activeNoteId: newNote.id });
-    return newNote.id;
-  },
+    createNote: () => {
+      const now = Date.now();
+      const note: Note = {
+        id: 'note-' + now + '-' + Math.random().toString(36).slice(2, 7),
+        title: '',
+        content: '',
+        createdAt: now,
+        updatedAt: now,
+      };
+      commit([note, ...get().notes], { activeNoteId: note.id, cursorPosition: null });
+      return note.id;
+    },
 
-  updateNote: (id, updates) => {
-    const updated = get().notes.map((note) => {
-      if (note.id === id) {
-        return {
-          ...note,
-          ...updates,
-          updatedAt: Date.now(),
-        };
-      }
-      return note;
-    });
+    updateNote: (id, updates) =>
+      commit(get().notes.map((n) => (n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n))),
 
-    saveNotesToStorage(updated);
-    set({ notes: updated });
-  },
+    deleteNote: (id) =>
+      commit(
+        get().notes.filter((n) => n.id !== id),
+        get().activeNoteId === id ? { activeNoteId: null } : {}
+      ),
 
-  deleteNote: (id) => {
-    const current = get().notes;
-    const filtered = current.filter((n) => n.id !== id);
-    saveNotesToStorage(filtered);
+    togglePin: (id) =>
+      commit(get().notes.map((n) => (n.id === id ? { ...n, isPinned: !n.isPinned } : n))),
 
-    const nextActive = get().activeNoteId === id ? filtered[0]?.id || null : get().activeNoteId;
-    set({ notes: filtered, activeNoteId: nextActive });
-  },
+    setCursorPosition: (cursorPosition) => set({ cursorPosition }),
 
-  togglePin: (id) => {
-    const updated = get().notes.map((n) => (n.id === id ? { ...n, isPinned: !n.isPinned } : n));
-    saveNotesToStorage(updated);
-    set({ notes: updated });
-  },
+    insertTextAtActiveNote: (text) => {
+      const { activeNoteId, notes, cursorPosition } = get();
+      const note = notes.find((n) => n.id === activeNoteId);
+      if (!note) return;
 
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
+      const end = note.content.length;
+      const start = Math.min(cursorPosition?.start ?? end, end);
+      const stop = Math.min(cursorPosition?.end ?? end, end);
+      const before = note.content.slice(0, start);
+      const after = note.content.slice(stop);
+      const prefix = before && !before.endsWith('\n') && !before.endsWith(' ') ? '\n' : '';
+      const caret = start + prefix.length + text.length;
 
-  setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
+      commit(
+        notes.map((n) =>
+          n.id === note.id
+            ? { ...n, content: before + prefix + text + after, updatedAt: Date.now() }
+            : n
+        ),
+        { cursorPosition: { start: caret, end: caret } }
+      );
+    },
 
-  setCursorPosition: (cursorPosition) => set({ cursorPosition }),
-
-  insertTextAtActiveNote: (textToInsert) => {
-    const { activeNoteId, notes, cursorPosition } = get();
-    if (!activeNoteId) return;
-
-    const note = notes.find((n) => n.id === activeNoteId);
-    if (!note) return;
-
-    let newContent = '';
-    const pos = cursorPosition || {
-      start: note.content.length,
-      end: note.content.length,
-    };
-
-    const before = note.content.substring(0, pos.start);
-    const after = note.content.substring(pos.end);
-
-    // Asegurar espaciado limpio si se inserta en una nueva línea o entre texto
-    const needsLeadingNewline = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
-    const prefix = needsLeadingNewline ? '\n' : '';
-
-    newContent = before + prefix + textToInsert + after;
-
-    const updated = notes.map((n) =>
-      n.id === activeNoteId
-        ? {
-            ...n,
-            content: newContent,
-            updatedAt: Date.now(),
-          }
-        : n
-    );
-
-    saveNotesToStorage(updated);
-
-    // Actualizar nueva posición del cursor
-    const newCursor = pos.start + prefix.length + textToInsert.length;
-    set({
-      notes: updated,
-      cursorPosition: { start: newCursor, end: newCursor },
-    });
-  },
-
-  reloadNotes: () => {
-    const reloaded = loadNotesFromStorage();
-    set({ notes: reloaded, activeNoteId: reloaded[0]?.id || null });
-  },
-}));
+    reloadNotes: () => set({ notes: loadNotes(), activeNoteId: null, cursorPosition: null }),
+  };
+});

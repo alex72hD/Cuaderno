@@ -7,198 +7,138 @@ import type {
   OrderBatch,
 } from '../types';
 
-const PRODUCTS_KEY = 'cuaderno_calc_products_v1';
-const ORDERS_KEY = 'cuaderno_calc_orders_v1';
-const ORDER_BATCHES_KEY = 'cuaderno_calc_order_batches_v1';
-const NOTES_KEY = 'cuaderno_calc_notes_v1';
-const HISTORY_KEY = 'cuaderno_calc_history_v1';
-const SETTINGS_KEY = 'cuaderno_calc_settings_v1';
+const KEYS = {
+  products: 'cuaderno_calc_products_v1',
+  orders: 'cuaderno_calc_orders_v1',
+  batches: 'cuaderno_calc_order_batches_v1',
+  notes: 'cuaderno_calc_notes_v1',
+  history: 'cuaderno_calc_history_v1',
+  settings: 'cuaderno_calc_settings_v1',
+} as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'paper',
   hapticSound: true,
   decimalPlaces: 2,
-  taxRate: 19,
   currencySymbol: '$',
-  defaultUnit: 'kg',
-  insertFormat: 'expr_and_result',
 };
 
-// IDs de datos de prueba antiguos a descartar si estaban en localStorage
-const MOCK_PROD_IDS = new Set(['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7', 'prod-8']);
-const MOCK_ORDER_IDS = new Set(['order-1', 'order-2']);
-const MOCK_NOTE_IDS = new Set(['seed-note-1']);
-
-export function loadProductsFromStorage(): Product[] {
+// ─── Lectura / escritura genéricas ─────────────────────────────
+function read<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(PRODUCTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const clean = parsed.filter((p: Product) => !MOCK_PROD_IDS.has(p.id));
-    if (clean.length !== parsed.length) {
-      saveProductsToStorage(clean);
-    }
-    return clean;
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 }
 
-export function saveProductsToStorage(products: Product[]): void {
+function readList<T>(key: string): T[] {
+  const parsed = read<unknown>(key, []);
+  return Array.isArray(parsed) ? (parsed as T[]) : [];
+}
+
+function write(key: string, value: unknown): void {
   try {
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
+    localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
-    console.error('Error guardando productos localmente:', err);
+    console.error('Error guardando datos locales:', err);
   }
 }
 
-export function loadOrdersFromStorage(): ClientOrder[] {
-  try {
-    const raw = localStorage.getItem(ORDERS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const clean = parsed.filter((o: ClientOrder) => !MOCK_ORDER_IDS.has(o.id));
-    if (clean.length !== parsed.length) {
-      saveOrdersToStorage(clean);
-    }
-    return clean;
-  } catch {
-    return [];
-  }
+// Auto-guardado con debounce (300–400 ms) para notas y pedidos; se vacía
+// de inmediato si la app pasa a segundo plano para no perder cambios.
+const DEBOUNCE_MS = 350;
+const pending = new Map<string, { timer: number; value: unknown }>();
+
+function writeDebounced(key: string, value: unknown): void {
+  const prev = pending.get(key);
+  if (prev) window.clearTimeout(prev.timer);
+  const timer = window.setTimeout(() => {
+    pending.delete(key);
+    write(key, value);
+  }, DEBOUNCE_MS);
+  pending.set(key, { timer, value });
 }
 
-export function saveOrdersToStorage(orders: ClientOrder[]): void {
-  try {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  } catch (err) {
-    console.error('Error guardando pedidos localmente:', err);
-  }
+export function flushPendingWrites(): void {
+  pending.forEach(({ timer, value }, key) => {
+    window.clearTimeout(timer);
+    write(key, value);
+  });
+  pending.clear();
 }
 
-export function loadOrderBatchesFromStorage(): OrderBatch[] {
-  try {
-    const raw = localStorage.getItem(ORDER_BATCHES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushPendingWrites);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingWrites();
+  });
 }
 
-export function saveOrderBatchesToStorage(batches: OrderBatch[]): void {
-  try {
-    localStorage.setItem(ORDER_BATCHES_KEY, JSON.stringify(batches));
-  } catch (err) {
-    console.error('Error guardando grupos de pedidos localmente:', err);
-  }
-}
+// ─── Datos del cuaderno ────────────────────────────────────────
+export const loadProducts = () => readList<Product>(KEYS.products);
+export const saveProducts = (v: Product[]) => write(KEYS.products, v);
 
-export function loadNotesFromStorage(): Note[] {
-  try {
-    const raw = localStorage.getItem(NOTES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const clean = parsed.filter((n: Note) => !MOCK_NOTE_IDS.has(n.id));
-    if (clean.length !== parsed.length) {
-      saveNotesToStorage(clean);
-    }
-    return clean;
-  } catch {
-    return [];
-  }
-}
+export const loadOrders = () => readList<ClientOrder>(KEYS.orders);
+export const saveOrders = (v: ClientOrder[]) => writeDebounced(KEYS.orders, v);
 
-export function saveNotesToStorage(notes: Note[]): void {
-  try {
-    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
-  } catch (err) {
-    console.error('Error guardando notas localmente:', err);
-  }
-}
+export const loadBatches = () => readList<OrderBatch>(KEYS.batches);
+export const saveBatches = (v: OrderBatch[]) => write(KEYS.batches, v);
 
-export function loadHistoryFromStorage(): CalculationHistoryItem[] {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+export const loadNotes = () => readList<Note>(KEYS.notes);
+export const saveNotes = (v: Note[]) => writeDebounced(KEYS.notes, v);
 
-export function saveHistoryToStorage(history: CalculationHistoryItem[]): void {
-  try {
-    const trimmed = history.slice(0, 60);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
-  } catch (err) {
-    console.error('Error guardando historial local:', err);
-  }
-}
+export const loadHistory = () => readList<CalculationHistoryItem>(KEYS.history);
+export const saveHistory = (v: CalculationHistoryItem[]) => write(KEYS.history, v.slice(0, 60));
 
-export function loadSettingsFromStorage(): AppSettings {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
-export function saveSettingsToStorage(settings: AppSettings): void {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  } catch (err) {
-    console.error('Error guardando configuraciones:', err);
-  }
-}
-
-export function exportBackupJSON(): string {
-  const data = {
-    version: 3,
-    exportDate: new Date().toISOString(),
-    products: loadProductsFromStorage(),
-    orders: loadOrdersFromStorage(),
-    orderBatches: loadOrderBatchesFromStorage(),
-    notes: loadNotesFromStorage(),
-    history: loadHistoryFromStorage(),
-    settings: loadSettingsFromStorage(),
+export function loadSettings(): AppSettings {
+  const raw = read<Partial<AppSettings>>(KEYS.settings, {});
+  return {
+    hapticSound: raw.hapticSound ?? DEFAULT_SETTINGS.hapticSound,
+    decimalPlaces: raw.decimalPlaces ?? DEFAULT_SETTINGS.decimalPlaces,
+    currencySymbol: raw.currencySymbol ?? DEFAULT_SETTINGS.currencySymbol,
   };
-  return JSON.stringify(data, null, 2);
+}
+export const saveSettings = (v: AppSettings) => write(KEYS.settings, v);
+
+// ─── Respaldo JSON ─────────────────────────────────────────────
+export function exportBackupJSON(): string {
+  flushPendingWrites();
+  return JSON.stringify(
+    {
+      version: 4,
+      exportDate: new Date().toISOString(),
+      products: loadProducts(),
+      orders: loadOrders(),
+      orderBatches: loadBatches(),
+      notes: loadNotes(),
+      history: loadHistory(),
+      settings: loadSettings(),
+    },
+    null,
+    2
+  );
 }
 
-export function importBackupJSON(jsonStr: string): { success: boolean; message: string } {
+export function importBackupJSON(json: string): { success: boolean; message: string } {
   try {
-    const data = JSON.parse(jsonStr);
-    if (!data) {
+    const data = JSON.parse(json);
+    if (!data || typeof data !== 'object') {
       return { success: false, message: 'El archivo está vacío o dañado.' };
     }
-    if (Array.isArray(data.products)) {
-      saveProductsToStorage(data.products);
-    }
-    if (Array.isArray(data.orders)) {
-      saveOrdersToStorage(data.orders);
-    }
-    saveOrderBatchesToStorage(Array.isArray(data.orderBatches) ? data.orderBatches : []);
-    if (Array.isArray(data.notes)) {
-      saveNotesToStorage(data.notes);
-    }
-    if (Array.isArray(data.history)) {
-      saveHistoryToStorage(data.history);
-    }
-    if (data.settings) {
-      saveSettingsToStorage(data.settings);
-    }
+    pending.forEach(({ timer }) => window.clearTimeout(timer));
+    pending.clear();
+    if (Array.isArray(data.products)) write(KEYS.products, data.products);
+    if (Array.isArray(data.orders)) write(KEYS.orders, data.orders);
+    if (Array.isArray(data.orderBatches)) write(KEYS.batches, data.orderBatches);
+    if (Array.isArray(data.notes)) write(KEYS.notes, data.notes);
+    if (Array.isArray(data.history)) saveHistory(data.history);
+    if (data.settings) write(KEYS.settings, data.settings);
     return {
       success: true,
-      message: `Respaldo restaurado con éxito (${data.orders?.length || 0} pedidos, ${data.products?.length || 0} productos).`,
+      message: `Respaldo restaurado (${data.orders?.length ?? 0} pedidos, ${data.products?.length ?? 0} productos, ${data.notes?.length ?? 0} notas).`,
     };
   } catch {
-    return { success: false, message: 'Error al interpretar el archivo de respaldo.' };
+    return { success: false, message: 'No se pudo leer el archivo de respaldo.' };
   }
 }

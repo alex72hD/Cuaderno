@@ -1,16 +1,11 @@
 import { create } from 'zustand';
-import type { CalculationHistoryItem, ViewMode, AppSettings } from '../types';
+import type { CalculationHistoryItem, AppSettings } from '../types';
 import {
   safeEvaluate,
   formatNumber,
   roundToPrecision,
 } from '../utils/mathEngine';
-import {
-  loadHistoryFromStorage,
-  saveHistoryToStorage,
-  loadSettingsFromStorage,
-  saveSettingsToStorage,
-} from '../storage/localStore';
+import { loadHistory, saveHistory, loadSettings, saveSettings } from '../storage/localStore';
 
 interface CalculatorState {
   expression: string;
@@ -18,7 +13,6 @@ interface CalculatorState {
   lastCalculatedResult: number | null;
   history: CalculationHistoryItem[];
   isHistoryOpen: boolean;
-  viewMode: ViewMode;
   isDrawerOpen: boolean;
   settings: AppSettings;
 
@@ -27,17 +21,13 @@ interface CalculatorState {
   setExpression: (expr: string) => void;
   clearAll: () => void;
   deleteLast: () => void;
-  evaluateAndCommit: (noteContext?: { noteId: string; noteTitle: string }) => {
+  evaluateAndCommit: () => {
     success: boolean;
     result: number;
     formatted: string;
   };
-  applyTax: (customRate?: number) => void;
-  applyDiscount: (percent: number) => void;
-  toggleSign: () => void;
   clearHistory: () => void;
   setIsHistoryOpen: (open: boolean) => void;
-  setViewMode: (mode: ViewMode) => void;
   toggleDrawer: (open?: boolean) => void;
   updateSettings: (updates: Partial<AppSettings>) => void;
 }
@@ -46,11 +36,10 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
   expression: '',
   previewResult: null,
   lastCalculatedResult: null,
-  history: loadHistoryFromStorage(),
+  history: loadHistory(),
   isHistoryOpen: false,
-  viewMode: 'split',
   isDrawerOpen: false,
-  settings: loadSettingsFromStorage(),
+  settings: loadSettings(),
 
   inputKey: (key: string) => {
     const current = get().expression;
@@ -121,7 +110,7 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     set({ expression: nextExpr, previewResult: preview });
   },
 
-  evaluateAndCommit: (noteContext) => {
+  evaluateAndCommit: () => {
     const { expression, settings, history } = get();
     const evalRes = safeEvaluate(expression);
 
@@ -142,12 +131,10 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
       result: resNumber,
       formattedResult: formatted,
       timestamp: Date.now(),
-      noteId: noteContext?.noteId,
-      noteTitle: noteContext?.noteTitle,
     };
 
     const nextHistory = [historyItem, ...history];
-    saveHistoryToStorage(nextHistory);
+    saveHistory(nextHistory);
 
     // Tras el igual, la expresión pasa a ser el resultado para operaciones continuas
     set({
@@ -164,56 +151,12 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     };
   },
 
-  applyTax: (customRate) => {
-    const { expression, settings } = get();
-    const rate = customRate !== undefined ? customRate : settings.taxRate;
-    const evalRes = safeEvaluate(expression);
-    if (evalRes.success && evalRes.result > 0) {
-      const withTax = roundToPrecision(evalRes.result * (1 + rate / 100), settings.decimalPlaces);
-      set({
-        expression: String(withTax),
-        previewResult: null,
-        lastCalculatedResult: withTax,
-      });
-    }
-  },
-
-  applyDiscount: (percent) => {
-    const { expression, settings } = get();
-    const evalRes = safeEvaluate(expression);
-    if (evalRes.success && evalRes.result > 0) {
-      const withDiscount = roundToPrecision(
-        evalRes.result * (1 - percent / 100),
-        settings.decimalPlaces
-      );
-      set({
-        expression: String(withDiscount),
-        previewResult: null,
-        lastCalculatedResult: withDiscount,
-      });
-    }
-  },
-
-  toggleSign: () => {
-    const { expression } = get();
-    if (!expression) return;
-    if (expression.startsWith('-')) {
-      const positive = expression.substring(1);
-      set({ expression: positive, previewResult: safeEvaluate(positive).result });
-    } else {
-      const negative = '-' + expression;
-      set({ expression: negative, previewResult: safeEvaluate(negative).result });
-    }
-  },
-
   clearHistory: () => {
-    saveHistoryToStorage([]);
+    saveHistory([]);
     set({ history: [] });
   },
 
   setIsHistoryOpen: (open) => set({ isHistoryOpen: open }),
-
-  setViewMode: (mode) => set({ viewMode: mode }),
 
   toggleDrawer: (open) =>
     set((state) => ({
@@ -222,7 +165,7 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
 
   updateSettings: (updates) => {
     const merged = { ...get().settings, ...updates };
-    saveSettingsToStorage(merged);
+    saveSettings(merged);
     set({ settings: merged });
   },
 }));

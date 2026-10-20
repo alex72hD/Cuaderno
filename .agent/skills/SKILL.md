@@ -20,10 +20,10 @@ Al diseñar o modificar componentes visuales en React y TailwindCSS:
 2. **Dimensiones de Botones e Interacción:**
    - Todos los botones de la calculadora y barras de acciones deben tener al menos `h-11` a `h-14` (44px a 56px) y `w-full` o un tamaño mínimo de `44px x 44px`.
    - Utilizar estados activos táctiles claros: `active:scale-95 transition-transform active:bg-neutral-200 dark:active:bg-neutral-700`.
-3. **Distribución de Pantalla Dividida o Desplegable (Split / Drawer):**
-   - **Modo Dividido (Split Screen):** Mitad superior: Editor/Lista de notas; Mitad inferior: Teclado de calculadora con pantalla de expresión.
-   - **Modo Drawer / Bottom Sheet:** La calculadora se desliza desde la parte inferior como un panel táctil sin tapar la nota activa.
-   - **Modo Teclado:** La calculadora actúa como un teclado numérico extendido que inserta resultados directamente en la línea de texto.
+3. **Navegación tipo cuaderno:**
+   - Tres pestañas inferiores (Pedidos, Notas, Calcular). Cada pestaña es un índice de hojas; al tocar una se abre la hoja a pantalla completa con flecha de volver.
+   - La calculadora también sube como panel inferior (bottom sheet) desde una nota para anotar resultados.
+   - Estilo: papel rayado (`.page`), tinta azul para acciones, margen rojo; un solo tema.
 
 ---
 

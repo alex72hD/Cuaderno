@@ -7,13 +7,13 @@ Aplicación móvil local para organizar pedidos por cliente, administrar product
 - **Gestión Integral de Pedidos y Grupos:**
   - Los pedidos agrupados e individuales están completamente integrados: en la pestaña **Pedidos** puedes ver todos tus pedidos, filtrar por "Sin grupo" o filtrar por grupos específicos (ej. “Pedido 24”).
   - Puedes crear nuevos grupos y asignar o reasignar cualquier pedido a un grupo directamente desde la hoja de pedido.
-  - La pestaña **Grupos** te permite consultar el balance total del grupo, cuántos clientes han pagado y administrar el ciclo de entrega.
+  - Al elegir un grupo ves cuántos clientes han pagado y puedes eliminarlo.
 - **Pesaje y Cálculo en Tiempo Real:** registra productos calculando de inmediato `precio × peso o cantidad`. Soporta descuentos, abonos y muestra el saldo a cobrar actualizado al instante.
 - **Compartir por WhatsApp:** copia el resumen formateado del recibo/pedido con un solo toque, incluyendo el grupo de entrega si aplica.
 - **Sin datos ficticios (cero mocks):** la app arranca 100% limpia y lista para uso real, sin datos mockeados ni notas de prueba prefabricadas.
 - **Diseño aligerado y ergonómico:** interfaz táctil optimizada para teléfonos móviles (360px a 430px), libre de elementos visuales saturados, con cabecera compacta y controles accesibles para el pulgar.
 - **Catálogo de Precios Local:** administra productos con precio base por kg, lb, gramo, unidad o paquete.
-- **Notas Rápidas:** crea y organiza apuntes con detección inteligente de sumas contables y calculadora rápida acoplada.
+- **Notas:** apuntes sobre papel rayado con suma automática de cifras y calculadora acoplada.
 - **Calculadora Segura:** motor aritmético exacto (sin `eval`), con historial de operaciones y precisión decimal.
 - **Respaldo Local Offline:** exporta e importa copias de seguridad en formato JSON cuando desees.
 
@@ -60,7 +60,7 @@ npm run preview  # Previsualiza la compilación de producción localmente
 
 ```text
 src/
-├── components/   # Vistas de pedidos (OrderSheet), catálogo, notas y calculadora
+├── components/   # Pedidos, hoja de cliente, pesaje, notas, calculadora y modales
 ├── storage/      # Persistencia en localStorage (cero mocks) y respaldo JSON
 ├── store/        # Stores de Zustand (useOrdersStore, useNotesStore, useCalculatorStore)
 ├── types/        # Definiciones de tipos (ClientOrder, OrderBatch, Product, Note)

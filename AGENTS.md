@@ -11,7 +11,7 @@ Es un cuaderno digital de notas y cuentas optimizado para dispositivos móviles 
 - **Frontend / Framework:** React 19 (con TypeScript) montado sobre **Vite** para máxima velocidad de compilación y recarga en caliente.
 - **Estilos:** **TailwindCSS** configurado con enfoque mobile-first (pantallas de 360px a 430px de ancho base) y paleta visual aligerada.
 - **Gestión de Estado:** **Zustand** para estado reactivo, liviano y desacoplado (`useOrdersStore`, `useNotesStore`, `useCalculatorStore`).
-- **Almacenamiento Local (100% Offline):** `localStorage` con sanitización de mocks y soporte de exportación/importación en JSON.
+- **Almacenamiento Local (100% Offline):** `localStorage` con guardado con debounce y soporte de exportación/importación en JSON.
 - **Arquitectura Móvil:** Diseño Web Móvil / PWA con ergonomía táctil y controles optimizados para el uso con pulgares.
 - **Iconografía:** **Lucide React** para botones táctiles legibles y minimalistas.
 - **Audio y Háptica:** Web Audio API local para feedback de toques sin dependencias externas.
@@ -19,13 +19,12 @@ Es un cuaderno digital de notas y cuentas optimizado para dispositivos móviles 
 ### Estructura de Carpetas
 ```text
 src/
-├── assets/             # Íconos y recursos locales
-├── components/         # OrderSheet, NoteEditor, NoteList, Calculator, Modales de Respaldo y Catálogo
+├── components/         # OrdersView, OrderSheet, WeighSheet, NoteList, NoteEditor, Calculator, modales y ui.tsx
 ├── storage/            # Persistencia en localStorage sin mocks y respaldo JSON
 ├── store/              # Stores de Zustand (useOrdersStore, useNotesStore, useCalculatorStore)
 ├── types/              # Definiciones TypeScript (ClientOrder, OrderBatch, Product, Note, Settings)
 ├── utils/              # Motor aritmético seguro (sin eval), formateadores y sonido local
-├── App.tsx             # Layout móvil principal con filtros integrados de grupos y navegación
+├── App.tsx             # Cuaderno: 3 pestañas inferiores (Pedidos, Notas, Calcular)
 └── main.tsx            # Punto de entrada
 ```
 

@@ -42,6 +42,13 @@
 
 ---
 
+### ADR-008: Interfaz tipo cuaderno y reducción de funciones
+- **Decisión:** Un solo tema de papel rayado; navegación inferior de 3 pestañas (Pedidos, Notas, Calcular). Los grupos viven como filtros dentro de Pedidos (se elimina la pestaña Grupos). Notas e índice/hoja sin sub-pestañas.
+- **Retirado:** temas oscuro/claro, IVA y descuentos % en la calculadora, categorías de notas, modo dividido, `Header` sin uso, assets de plantilla de Vite, limpieza de mocks antiguos.
+- **Corregido:** insertar desde la calculadora ya no se pierde al seguir escribiendo en la nota; el guardado con debounce vive en `localStore`.
+
+---
+
 ## 3. Esquemas de Datos Básicos (Contratos de Estado)
 
 ### Modelo de Pedido del Cliente (`ClientOrder`)
@@ -89,7 +96,6 @@ interface Note {
 
 ## 4. Estado Actual del Repositorio
 - **Fase:** Fase de refinamiento y unificación de pedidos completada con éxito.
-- **Servidor Local Activo:** Vite corriendo en `http://localhost:5173`.
 - **Componentes y Módulos Clave:**
   - `src/store/useOrdersStore.ts`: Gestión unificada de pedidos individuales y agrupados, `setOrderBatch`, filtros y totales reactivos.
   - `src/components/OrderSheet.tsx`: Hoja de pedido con selector de grupo, pesaje instantáneo aligerado, desglose claro y compartir por WhatsApp.

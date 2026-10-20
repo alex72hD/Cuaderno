@@ -1,49 +1,56 @@
 @import "tailwindcss";
 
+@theme {
+  --color-desk: #e6dfcd;
+  --color-paper: #fbf7ec;
+  --color-paper-2: #f2ebd8;
+  --color-ink: #27313c;
+  --color-pencil: #6b7280;
+  --color-rule: #c9d6e4;
+  --color-margin: #e08a84;
+  --color-pen: #1f4fd8;
+  --color-ok: #2e7d4f;
+  --color-alert: #b4332b;
+}
+
 @layer base {
   :root {
     --sat: env(safe-area-inset-top, 0px);
     --sab: env(safe-area-inset-bottom, 0px);
+    --line: 28px; /* alto de cada renglón del cuaderno */
   }
-
-  * {
-    -webkit-tap-highlight-color: transparent;
-    box-sizing: border-box;
-  }
-
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  html, body, #root { height: 100%; }
   body {
+    margin: 0;
+    background: var(--color-desk);
+    color: var(--color-ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     overscroll-behavior-y: none;
+    overflow-x: hidden;
   }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; transition: transform .08s ease, background-color .12s ease; }
+  button:active:not(:disabled) { transform: scale(.96); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  input:focus, textarea:focus, select:focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--color-pen); outline-offset: 1px; }
 }
 
-/* Custom subtle scrollbars */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+/* Hoja rayada con margen rojo; las rayas se desplazan junto con el contenido */
+.page {
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(90deg, transparent 33px, color-mix(in srgb, var(--color-margin) 70%, transparent) 33px 34px, transparent 34px),
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--line) - 1px), var(--color-rule) calc(var(--line) - 1px) var(--line));
+  background-attachment: local;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.45);
-}
+.rule-line { min-height: var(--line); line-height: var(--line); }
 
-/* Mobile tactile micro-interactions */
-.touch-press {
-  transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.12s ease;
-}
-.touch-press:active {
-  transform: scale(0.95);
-}
+.pt-safe { padding-top: max(.5rem, var(--sat)); }
+.pb-safe { padding-bottom: max(.25rem, var(--sab)); }
 
-/* Safe area padding classes */
-.pt-safe {
-  padding-top: max(0.75rem, var(--sat));
-}
-.pb-safe {
-  padding-bottom: max(0.75rem, var(--sab));
-}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(39, 49, 60, .25); border-radius: 9999px; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
